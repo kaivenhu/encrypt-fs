@@ -1,19 +1,19 @@
-
-CXXFLAGS += -std=c++17 -g -Wall -W -Werror -fPIC \
-			-DFUSE_USE_VERSION=30 `pkg-config fuse --cflags`
-LDFLAGS += `pkg-config fuse --libs`
+include Makefile.inc
 
 EXEC=encfs
 EXE_SRC = main.cc
 EXE_OBJ = $(EXE_SRC:.cc=.o)
 
 
-.PHONY: all clean
+.PHONY: all clean $(SUB_DIR)
 
-all: $(EXEC)
+all: $(SUB_DIR) $(EXEC)
 
-clean:
+clean: $(SUB_DIR)
 	rm -f $(EXEC) $(EXE_OBJ)
+
+$(SUB_DIR):
+	$(MAKE) -C $@ $(MAKECMDGOALS);
 
 $(EXEC): $(EXE_OBJ)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
