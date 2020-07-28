@@ -16,5 +16,8 @@ int encfs_write(const char *fpath,
                 size_t size,
                 off_t offset,
                 struct fuse_file_info *fi);
+int encfs_release(const char *fpath, struct fuse_file_info *fi);
+int encfs_unlink(const char *fpath);
+int encfs_truncate(const char *fpath, off_t size);
 
 #endif /* ENCFS_H_ */

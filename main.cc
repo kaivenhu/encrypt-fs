@@ -15,6 +15,9 @@ static void init_ops(struct fuse_operations *op)
     op->open = encfs_open;
     op->read = encfs_read;
     op->write = encfs_write;
+    op->release = encfs_release;
+    op->unlink = encfs_unlink;
+    op->truncate = encfs_truncate;
 }
 
 int main(int argc, char *argv[])

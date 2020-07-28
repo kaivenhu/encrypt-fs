@@ -72,3 +72,33 @@ int encfs_write(UNUSED const char *fpath,
     }
     return ret;
 }
+
+int encfs_release(const char *fpath, struct fuse_file_info *fi)
+{
+    LOGGER->WriteLog("release: " + string(fpath));
+
+    if (0 != close(fi->fh)) {
+        return -errno;
+    }
+    return 0;
+}
+
+int encfs_unlink(const char *fpath)
+{
+    LOGGER->WriteLog("unlink: " + string(fpath));
+
+    if (0 != unlink(fpath)) {
+        return -errno;
+    }
+    return 0;
+}
+
+int encfs_truncate(const char *fpath, off_t size)
+{
+    LOGGER->WriteLog("truncate: " + string(fpath));
+
+    if (0 != truncate(fpath, size)) {
+        return -errno;
+    }
+    return 0;
+}
