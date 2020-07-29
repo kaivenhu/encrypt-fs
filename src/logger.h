@@ -22,7 +22,5 @@ public:
 
 }  // namespace encfs
 
-#define LOGGER ((encfs::Logger *) fuse_get_context()->private_data)
-
 
 #endif /* LOGGER_H_ */

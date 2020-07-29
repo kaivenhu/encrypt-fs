@@ -6,7 +6,6 @@
 #include <string>
 
 #include "encfs.h"
-#include "logger.h"
 
 #define UNUSED [[maybe_unused]]
 
@@ -15,10 +14,23 @@ namespace encfs
 {
 using std::string;
 
+Encfs::Encfs(const string &rootdir) : rootdir_(rootdir), log_() {}
+
+string Encfs::GetRealpath(const string &fpath) const
+{
+    return rootdir_ + "/" + fpath;
+}
+
+void Encfs::WriteLog(const string &text)
+{
+    log_.WriteLog(text);
+}
+
 int encfs_getattr(const char *fpath, struct stat *statbuf)
 {
-    LOGGER->WriteLog("getattr: " + string(fpath));
-    if (0 != lstat(fpath, statbuf)) {
+    const string realpath = ENCFS->GetRealpath(fpath);
+    ENCFS->WriteLog("getattr: " + realpath);
+    if (0 != lstat(realpath.c_str(), statbuf)) {
         return -errno;
     }
     return 0;
@@ -26,8 +38,9 @@ int encfs_getattr(const char *fpath, struct stat *statbuf)
 
 int encfs_mknod(const char *fpath, mode_t mode, dev_t dev)
 {
-    LOGGER->WriteLog("mknod: " + string(fpath));
-    if (0 != mknod(fpath, mode, dev)) {
+    const string realpath = ENCFS->GetRealpath(fpath);
+    ENCFS->WriteLog("mknod: " + realpath);
+    if (0 != mknod(realpath.c_str(), mode, dev)) {
         return -errno;
     }
     return 0;
@@ -36,10 +49,11 @@ int encfs_mknod(const char *fpath, mode_t mode, dev_t dev)
 int encfs_open(const char *fpath, struct fuse_file_info *fi)
 {
     int fd = -1;
+    const string realpath = ENCFS->GetRealpath(fpath);
 
-    LOGGER->WriteLog("open: " + string(fpath));
+    ENCFS->WriteLog("open: " + realpath);
 
-    if (-1 == (fd = open(fpath, fi->flags))) {
+    if (-1 == (fd = open(realpath.c_str(), fi->flags))) {
         return -errno;
     }
     fi->fh = fd;
@@ -53,7 +67,8 @@ int encfs_read(UNUSED const char *fpath,
                struct fuse_file_info *fi)
 {
     ssize_t ret = -1;
-    LOGGER->WriteLog("read: " + string(fpath));
+    const string realpath = ENCFS->GetRealpath(fpath);
+    ENCFS->WriteLog("read: " + realpath);
 
     if (-1 == (ret = pread(fi->fh, buf, size, offset))) {
         return -errno;
@@ -68,7 +83,8 @@ int encfs_write(UNUSED const char *fpath,
                 struct fuse_file_info *fi)
 {
     ssize_t ret = -1;
-    LOGGER->WriteLog("write: " + string(fpath));
+    const string realpath = ENCFS->GetRealpath(fpath);
+    ENCFS->WriteLog("write: " + realpath);
 
     if (-1 == (ret = pwrite(fi->fh, buf, size, offset))) {
         return -errno;
@@ -78,7 +94,8 @@ int encfs_write(UNUSED const char *fpath,
 
 int encfs_release(const char *fpath, struct fuse_file_info *fi)
 {
-    LOGGER->WriteLog("release: " + string(fpath));
+    const string realpath = ENCFS->GetRealpath(fpath);
+    ENCFS->WriteLog("release: " + realpath);
 
     if (0 != close(fi->fh)) {
         return -errno;
@@ -88,9 +105,10 @@ int encfs_release(const char *fpath, struct fuse_file_info *fi)
 
 int encfs_unlink(const char *fpath)
 {
-    LOGGER->WriteLog("unlink: " + string(fpath));
+    const string realpath = ENCFS->GetRealpath(fpath);
+    ENCFS->WriteLog("unlink: " + realpath);
 
-    if (0 != unlink(fpath)) {
+    if (0 != unlink(realpath.c_str())) {
         return -errno;
     }
     return 0;
@@ -98,9 +116,10 @@ int encfs_unlink(const char *fpath)
 
 int encfs_truncate(const char *fpath, off_t size)
 {
-    LOGGER->WriteLog("truncate: " + string(fpath));
+    const string realpath = ENCFS->GetRealpath(fpath);
+    ENCFS->WriteLog("truncate: " + realpath);
 
-    if (0 != truncate(fpath, size)) {
+    if (0 != truncate(realpath.c_str(), size)) {
         return -errno;
     }
     return 0;
