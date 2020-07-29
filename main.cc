@@ -10,14 +10,14 @@
 static void init_ops(struct fuse_operations *op)
 {
     memset(op, 0, sizeof(struct fuse_operations));
-    op->getattr = encfs_getattr;
-    op->mknod = encfs_mknod;
-    op->open = encfs_open;
-    op->read = encfs_read;
-    op->write = encfs_write;
-    op->release = encfs_release;
-    op->unlink = encfs_unlink;
-    op->truncate = encfs_truncate;
+    op->getattr = encfs::encfs_getattr;
+    op->mknod = encfs::encfs_mknod;
+    op->open = encfs::encfs_open;
+    op->read = encfs::encfs_read;
+    op->write = encfs::encfs_write;
+    op->release = encfs::encfs_release;
+    op->unlink = encfs::encfs_unlink;
+    op->truncate = encfs::encfs_truncate;
 }
 
 int main(int argc, char *argv[])

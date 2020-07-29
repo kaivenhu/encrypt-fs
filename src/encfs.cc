@@ -10,6 +10,9 @@
 
 #define UNUSED [[maybe_unused]]
 
+
+namespace encfs
+{
 using std::string;
 
 int encfs_getattr(const char *fpath, struct stat *statbuf)
@@ -102,3 +105,6 @@ int encfs_truncate(const char *fpath, off_t size)
     }
     return 0;
 }
+
+
+}  // namespace encfs
