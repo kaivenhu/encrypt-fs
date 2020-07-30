@@ -4,7 +4,7 @@ PROJ_PATH=$(CURRENT_DIR)
 
 LIB_NAME=encryptfs
 
-SUB_DIR := src
+SUB_DIR := src test
 SHLIB = lib$(LIB_NAME).so
 
 ########### Compile Options #############

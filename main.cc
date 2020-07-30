@@ -35,7 +35,6 @@ int main(int argc, char *argv[])
     argv[argc - 1] = NULL;
     --argc;
 
-    std::cout << "Hell World !" << std::endl;
     init_ops(&encfs_ops);
 
     fs->WriteLog("Hello World !");
