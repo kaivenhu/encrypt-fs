@@ -11,7 +11,7 @@ AES::AES(const vector<uint8_t> &input)
 {
     array<uint32_t, 4> key = {0};
     for (decltype(input.size()) i = 0; i < input.size(); ++i) {
-        key[i / 4] |= static_cast<uint32_t>(input[i]) << (8 * (4 - (i % 4)));
+        key[i / 4] |= static_cast<uint32_t>(input[i]) << (8 * (3 - (i % 4)));
     }
     round_ = 44;
     KeyExpansion(key);
@@ -20,14 +20,12 @@ AES::AES(const vector<uint8_t> &input)
 void AES::KeyExpansion(const array<uint32_t, 4> &key)
 {
     // First round key.
-    for (int i = 0; i < 4; ++i) {
-        round_key_[i] = key[i];
-    }
+    std::copy(key.begin(), key.end(), round_key_.begin());
 
     for (int i = 4; i < round_; ++i) {
         uint32_t temp = round_key_[i - 1];
         if (!(i % 4)) {
-            temp = RotWord(temp, 1);
+            temp = RotWord(temp, 8);
             temp = SubWord(temp);
             temp ^= RCON[(i / 4) - 1];
         }

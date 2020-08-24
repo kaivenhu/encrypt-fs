@@ -15,13 +15,13 @@ class AES
 
     int round_;
 
-    std::array<uint32_t, 44> round_key_;
+    std::array<uint32_t, 44> round_key_ = {0};
 
     uint32_t SubWord(const uint32_t &word)
     {
         uint32_t x = 0;
         for (int i = 3; i >= 0; --i) {
-            x |= S_BOX[static_cast<uint8_t>((word >> (8 * i)) & 0xF)]
+            x |= S_BOX[static_cast<uint8_t>((word >> (8 * i)) & 0xFF)]
                  << (8 * i);
         }
         return x;
@@ -39,7 +39,7 @@ public:
     AES(AES &&) = delete;
     AES &operator=(AES) = delete;
 
-    std::vector<uint32_t> round_key()
+    std::vector<uint32_t> round_key() const
     {
         return std::vector<uint32_t>(round_key_.begin(), round_key_.end());
     };
