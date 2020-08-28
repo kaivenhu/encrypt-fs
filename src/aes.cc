@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include "aes.h"
 
 namespace encfs
@@ -7,33 +9,144 @@ namespace aes
 using std::array;
 using std::vector;
 
-AES::AES(const vector<uint8_t> &input)
+AES::AES(const AES_TEXT &input)
 {
     array<uint32_t, 4> key = {0};
-    for (decltype(input.size()) i = 0; i < input.size(); ++i) {
-        key[i / 4] |= static_cast<uint32_t>(input[i]) << (8 * (3 - (i % 4)));
+    for (decltype(input.size()) i = 0;
+         i < std::min(input.size(), static_cast<decltype(input.size())>(16));
+         ++i) {
+        key[i / AES_BYTES_PER_WORD] |=
+            Byte2Word(input[i], i % AES_BYTES_PER_WORD);
     }
     round_ = 44;
     KeyExpansion(key);
 }
 
+AES_TEXT AES::Encrypt(const AES_TEXT &data)
+{
+    int i = 0;
+    AES_BLOCK input = {0};
+    AES_TEXT output;
+    for (decltype(data.size()) i = 0;
+         i < std::min(data.size(), static_cast<decltype(data.size())>(
+                                       AES_TEXT_WORDS * AES_BYTES_PER_WORD));
+         ++i) {
+        input[i / AES_BYTES_PER_WORD] |=
+            Byte2Word(data[i], i % AES_BYTES_PER_WORD);
+    }
+
+    input = TransformBlock(input);
+    AddRoundKey(input, 0);
+    for (i = 1; i < (round_ / AES_TEXT_WORDS - 1); ++i) {
+        Substitute(input);
+        ShiftRows(input);
+        MixColumn(input);
+        AddRoundKey(input, i);
+    }
+    Substitute(input);
+    ShiftRows(input);
+    AddRoundKey(input, i);
+
+    input = TransformBlock(input);
+    for (decltype(data.size()) i = 0; i < data.size(); ++i) {
+        output.push_back(
+            Word2Byte(input[i / AES_BYTES_PER_WORD], i % AES_BYTES_PER_WORD));
+    }
+    return output;
+}
+
+AES_BLOCK AES::TransformBlock(const AES_BLOCK &data) const
+{
+    AES_BLOCK tmp = {0};
+    for (int i = 0; i < AES_TEXT_WORDS; ++i) {
+        uint32_t shift = AES_BITS_PER_BYTE * (AES_BYTES_PER_WORD - i - 1);
+        for (int j = 0; j < AES_BYTES_PER_WORD; ++j) {
+            tmp[i] |= ((data[j] >> shift) & 0xFF)
+                      << (AES_BITS_PER_BYTE * (AES_BYTES_PER_WORD - j - 1));
+        }
+    }
+    return tmp;
+}
+
 void AES::KeyExpansion(const array<uint32_t, 4> &key)
 {
     // First round key.
-    std::copy(key.begin(), key.end(), round_key_.begin());
+    AES_BLOCK block = {0};
+    decltype(round_key_) raw_round_key = {0};
+    std::copy(key.begin(), key.end(), raw_round_key.begin());
 
     for (int i = 4; i < round_; ++i) {
-        uint32_t temp = round_key_[i - 1];
+        uint32_t temp = raw_round_key[i - 1];
         if (!(i % 4)) {
-            temp = RotWord(temp, 8);
+            temp = RotWord(temp, AES_BITS_PER_BYTE);
             temp = SubWord(temp);
             temp ^= RCON[(i / 4) - 1];
         }
-        round_key_[i] = round_key_[i - 4] ^ temp;
+        raw_round_key[i] = raw_round_key[i - 4] ^ temp;
+    }
+    for (int i = 0; i < (round_ / AES_TEXT_WORDS); ++i) {
+        block = TransformBlock({raw_round_key[i * 4], raw_round_key[i * 4 + 1],
+                                raw_round_key[i * 4 + 2],
+                                raw_round_key[i * 4 + 3]});
+        std::copy(block.begin(), block.end(), round_key_.begin() + (i * 4));
     }
 }
 
-const std::array<uint8_t, 256> AES::S_BOX = {
+vector<uint32_t> AES::round_key() const
+{
+    vector<uint32_t> v;
+    for (int i = 0; i < (round_ / AES_TEXT_WORDS); ++i) {
+        AES_BLOCK block =
+            TransformBlock({round_key_[i * 4], round_key_[i * 4 + 1],
+                            round_key_[i * 4 + 2], round_key_[i * 4 + 3]});
+        for (const auto &x : block) {
+            v.push_back(x);
+        }
+    }
+    return v;
+}
+
+void AES::AddRoundKey(AES_BLOCK &data, const int &r)
+{
+    for (int i = 0; i < AES_TEXT_WORDS; ++i) {
+        data[i] ^= round_key_[r * AES_TEXT_WORDS + i];
+    }
+}
+
+void AES::Substitute(AES_BLOCK &data)
+{
+    for (int i = 0; i < AES_TEXT_WORDS; ++i) {
+        data[i] = SubWord(data[i]);
+    }
+}
+
+void AES::ShiftRows(AES_BLOCK &data)
+{
+    for (int i = 0; i < AES_TEXT_WORDS; ++i) {
+        data[i] = RotWord(data[i], i * AES_BITS_PER_BYTE);
+    }
+}
+
+void AES::MixColumn(array<uint32_t, 4> &data)
+{
+    AES_BLOCK a = data;
+    AES_BLOCK b = {0};
+
+    for (int i = 0; i < AES_TEXT_WORDS; ++i) {
+        uint32_t mask = data[i] & 0x80808080;
+        mask |= mask >> 1;
+        mask |= mask >> 2;
+        mask |= mask >> 4;
+        b[i] = (data[i] << 1) & 0xFEFEFEFE;
+        b[i] ^= 0x1B1B1B1B & mask;
+    }
+    data[0] = b[0] ^ a[3] ^ a[2] ^ b[1] ^ a[1];
+    data[1] = b[1] ^ a[0] ^ a[3] ^ b[2] ^ a[2];
+    data[2] = b[2] ^ a[1] ^ a[0] ^ b[3] ^ a[3];
+    data[3] = b[3] ^ a[2] ^ a[1] ^ b[0] ^ a[0];
+}
+
+const std::array<uint8_t, AES_SBOX_BYTES> AES::S_BOX = {
     // 0    1     2     3     4     5     6     7
     // 8    9     A     B     C     D     E     F
     0x63, 0x7C, 0x77, 0x7B, 0xF2, 0x6B, 0x6F, 0xC5,
@@ -70,7 +183,7 @@ const std::array<uint8_t, 256> AES::S_BOX = {
     0x41, 0x99, 0x2D, 0x0F, 0xB0, 0x54, 0xBB, 0x16  // F
 };
 
-const std::array<uint32_t, 10> AES::RCON = {
+const std::array<uint32_t, AES_RCON_WORDS> AES::RCON = {
     0x01000000, 0x02000000, 0x04000000, 0x08000000, 0x10000000,
     0x20000000, 0x40000000, 0x80000000, 0x1B000000, 0x36000000};
 
