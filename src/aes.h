@@ -66,6 +66,7 @@ public:
     AES &operator=(AES) = delete;
 
     AES_TEXT Encrypt(const AES_TEXT &data);
+    void InvMixColumn(std::array<uint8_t, 4> &data);
 
     std::vector<uint32_t> round_key() const;
 };
