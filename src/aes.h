@@ -51,12 +51,21 @@ class AES
     {
         return (word << shift) | (word >> (-shift & 31));
     }
+    uint32_t XTimes(const uint32_t &data)
+    {
+        uint32_t mask = data & 0x80808080;
+        mask |= mask >> 1;
+        mask |= mask >> 2;
+        mask |= mask >> 4;
+        return ((data << 1) & 0xFEFEFEFE) ^ (0x1B1B1B1B & mask);
+    }
     AES_BLOCK TransformBlock(const AES_BLOCK &data) const;
     void KeyExpansion(const std::array<uint32_t, 4> &key);
     void AddRoundKey(AES_BLOCK &data, const int &r);
     void Substitute(AES_BLOCK &data);
     void ShiftRows(AES_BLOCK &data);
     void MixColumn(AES_BLOCK &data);
+    void InvMixColumn(AES_BLOCK &data);
 
 public:
     AES(const AES_TEXT &input);
@@ -66,7 +75,6 @@ public:
     AES &operator=(AES) = delete;
 
     AES_TEXT Encrypt(const AES_TEXT &data);
-    void InvMixColumn(std::array<uint8_t, 4> &data);
 
     std::vector<uint32_t> round_key() const;
 };

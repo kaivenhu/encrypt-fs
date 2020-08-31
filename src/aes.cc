@@ -133,59 +133,31 @@ void AES::MixColumn(array<uint32_t, 4> &data)
     AES_BLOCK b = {0};
 
     for (int i = 0; i < AES_TEXT_WORDS; ++i) {
-        uint32_t mask = data[i] & 0x80808080;
-        mask |= mask >> 1;
-        mask |= mask >> 2;
-        mask |= mask >> 4;
-        b[i] = (data[i] << 1) & 0xFEFEFEFE;
-        b[i] ^= 0x1B1B1B1B & mask;
+        b[i] = XTimes(data[i]);
     }
     data[0] = b[0] ^ a[3] ^ a[2] ^ b[1] ^ a[1];
     data[1] = b[1] ^ a[0] ^ a[3] ^ b[2] ^ a[2];
     data[2] = b[2] ^ a[1] ^ a[0] ^ b[3] ^ a[3];
     data[3] = b[3] ^ a[2] ^ a[1] ^ b[0] ^ a[0];
 }
-#define xtime(x)   ((x << 1) ^ (((x >> 7) & 1) * 0x1b))
-#define Multiply(x,y)   ((y      & 0x01) * x) \
-                      ^ ((y >> 1 & 0x01) * xtime(x)) \
-                      ^ ((y >> 2 & 0x01) * xtime(xtime(x))) \
-                      ^ ((y >> 3 & 0x01) * xtime(xtime(xtime(x)))) \
-                      ^ ((y >> 4 & 0x01) * xtime(xtime(xtime(xtime(x)))))
 
-void AES::InvMixColumn(array<uint8_t, 4> &data)
+void AES::InvMixColumn(AES_BLOCK &data)
 {
-    array<uint8_t, 4> a = data;
-    uint8_t tmp = data[0] ^ data[1] ^ data[2] ^ data[3];
-    array<uint8_t, 4> m4 = {0};
-    array<uint8_t, 4> m2 = {0};
+    AES_BLOCK a = data;
+    uint32_t tmp = data[0] ^ data[1] ^ data[2] ^ data[3];
+    AES_BLOCK m4 = {0};
+    AES_BLOCK m2 = {0};
 
-    tmp ^= xtime(xtime(xtime(tmp)));
-    for (int i = 0; i < 4; ++i) {
-        m4[i] = xtime(xtime(data[i]));
-        m2[i] = xtime(data[i]);
+    tmp ^= XTimes(XTimes(XTimes(tmp)));
+    for (int i = 0; i < AES_TEXT_WORDS; ++i) {
+        m4[i] = XTimes(XTimes(data[i]));
+        m2[i] = XTimes(data[i]);
     }
 
     data[0] = tmp ^ a[0] ^ m4[0] ^ m4[2] ^ m2[0] ^ m2[1];
     data[1] = tmp ^ a[1] ^ m4[1] ^ m4[3] ^ m2[1] ^ m2[2];
     data[2] = tmp ^ a[2] ^ m4[2] ^ m4[0] ^ m2[2] ^ m2[3];
     data[3] = tmp ^ a[3] ^ m4[3] ^ m4[1] ^ m2[3] ^ m2[0];
-
-    /*
-    uint8_t d0, d1, d2, d3;
-    d0 = data[0];
-    d1 = data[1];
-    d2 = data[2];
-    d3 = data[3];
-
-    data[0] = Multiply(d0, 0x0e) ^ Multiply(d1, 0x0b) ^ 
-               Multiply(d2, 0x0d) ^ Multiply(d3, 0x09);
-    data[1] = Multiply(d0, 0x09) ^ Multiply(d1, 0x0e) ^ 
-               Multiply(d2, 0x0b) ^ Multiply(d3, 0x0d);
-    data[2] = Multiply(d0, 0x0d) ^ Multiply(d1, 0x09) ^ 
-               Multiply(d2, 0x0e) ^ Multiply(d3, 0x0b);
-    data[3] = Multiply(d0, 0x0b) ^ Multiply(d1, 0x0d) ^ 
-               Multiply(d2, 0x09) ^ Multiply(d3, 0x0e);
-    */
 }
 
 const std::array<uint8_t, AES_SBOX_BYTES> AES::S_BOX = {
