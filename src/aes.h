@@ -22,6 +22,7 @@ typedef std::vector<uint8_t> AES_TEXT;
 class AES
 {
     static const std::array<uint8_t, AES_SBOX_BYTES> S_BOX;
+    static const std::array<uint8_t, AES_SBOX_BYTES> INV_S_BOX;
     static const std::array<uint32_t, AES_RCON_WORDS> RCON;
 
     int round_;
@@ -37,19 +38,22 @@ class AES
     {
         return static_cast<uint32_t>(word) << AES_SHIFT_BITS(idx);
     }
-
-    uint32_t SubWord(const uint32_t &word)
+    uint32_t SubWord(const uint32_t &word,
+                     const std::array<uint8_t, AES_SBOX_BYTES> &box)
     {
         uint32_t x = 0;
         for (int i = 3; i >= 0; --i) {
-            x |= S_BOX[static_cast<uint8_t>((word >> (8 * i)) & 0xFF)]
-                 << (8 * i);
+            x |= box[static_cast<uint8_t>((word >> (8 * i)) & 0xFF)] << (8 * i);
         }
         return x;
     }
     uint32_t RotWord(const uint32_t &word, const uint32_t &shift)
     {
         return (word << shift) | (word >> (-shift & 31));
+    }
+    uint32_t InvRotWord(const uint32_t &word, const uint32_t &shift)
+    {
+        return (word >> shift) | (word << (-shift & 31));
     }
     uint32_t XTimes(const uint32_t &data)
     {
@@ -63,7 +67,9 @@ class AES
     void KeyExpansion(const std::array<uint32_t, 4> &key);
     void AddRoundKey(AES_BLOCK &data, const int &r);
     void Substitute(AES_BLOCK &data);
+    void InvSubstitute(AES_BLOCK &data);
     void ShiftRows(AES_BLOCK &data);
+    void InvShiftRows(AES_BLOCK &data);
     void MixColumn(AES_BLOCK &data);
     void InvMixColumn(AES_BLOCK &data);
 
@@ -75,6 +81,7 @@ public:
     AES &operator=(AES) = delete;
 
     AES_TEXT Encrypt(const AES_TEXT &data);
+    AES_TEXT Decrypt(const AES_TEXT &data);
 
     std::vector<uint32_t> round_key() const;
 };
