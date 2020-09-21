@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <cstdlib>
+#include <ctime>
 
 #include "../src/aes.h"
 #include "utils.h"
@@ -203,6 +204,25 @@ TEST(aes_128, decrypt)
     EXPECT_TRUE(IsVectorEqual(x, aes_zero.Decrypt(aes_zero.Encrypt(x))));
     EXPECT_TRUE(IsVectorEqual(x, aes_ff.Decrypt(aes_ff.Encrypt(x))));
     EXPECT_TRUE(IsVectorEqual(x, aes_test.Decrypt(aes_test.Encrypt(x))));
+}
+
+TEST(aes_128, random)
+{
+    srand(time(NULL));
+    for (int i = 0; i < 1000; ++i) {
+        AES_TEXT key;
+        for (int k = 0; k < AES_TEXT_BYTES; ++k) {
+            key.push_back(static_cast<uint8_t>(rand() & 0xFF));
+        }
+        AES aes(key);
+        for (int run = 0; run < 1000; ++run) {
+            AES_TEXT data;
+            for (int d = 0; d < AES_TEXT_BYTES; ++d) {
+                data.push_back(static_cast<uint8_t>(rand() & 0xFF));
+            }
+            EXPECT_TRUE(IsVectorEqual(data, aes.Decrypt(aes.Encrypt(data))));
+        }
+    }
 }
 
 int main(int argc, char **argv)
